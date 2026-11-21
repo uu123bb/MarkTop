@@ -18,6 +18,9 @@ setting-marktop.json.bak
 *.log
 .cache/
 
+# local agent workspace notes (keep on disk, out of the repository)
+.workbuddy/
+
 # os / editor
 Thumbs.db
 desktop.ini
