@@ -21,6 +21,7 @@
   --danger: #f14c4c;
   --warning: #cca700;
   --success: #4ec9b0;
+  --alert-important: #ab7df8;
   --inline-code-bg: #2b2b2b;
   --scroll-thumb: #4a4a4a;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -42,6 +43,7 @@
   --danger: #c72e2e;
   --warning: #9a6700;
   --success: #0f7b6c;
+  --alert-important: #8250df;
   --inline-code-bg: #f2f2f2;
   --scroll-thumb: #c6c6c6;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.12);

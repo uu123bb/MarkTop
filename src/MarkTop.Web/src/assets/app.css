@@ -35,8 +35,7 @@ body {
 }
 
 #source-pane,
-#preview-pane,
-#ir-pane {
+#preview-pane {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -58,47 +57,19 @@ body {
   min-height: 100%;
 }
 
-#ir-pane {
-  display: none;
-  overflow: auto;
-  background: var(--bg);
-}
-
-#ir-host {
-  padding: 8px 0 64px;
-}
-
 /* mode switching */
 #workspace.mode-source #preview-pane,
-#workspace.mode-source #splitter,
-#workspace.mode-immersive #preview-pane,
-#workspace.mode-immersive #splitter,
-#workspace.mode-ir #source-pane,
-#workspace.mode-ir #preview-pane,
-#workspace.mode-ir #splitter {
+#workspace.mode-source #splitter {
   display: none;
 }
 
-#workspace.mode-source,
-#workspace.mode-immersive,
-#workspace.mode-ir {
+#workspace.mode-source {
   grid-template-columns: minmax(0, 1fr);
-}
-
-#workspace.mode-ir #ir-pane {
-  display: block;
-}
-
-#workspace.mode-immersive #cm-host {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 32px 0 40vh;
 }
 
 /* non-markdown files never preview */
 #workspace.kind-code #preview-pane,
-#workspace.kind-code #splitter,
-#workspace.kind-code #ir-pane {
+#workspace.kind-code #splitter {
   display: none;
 }
 
@@ -316,30 +287,65 @@ body {
   max-width: 100%;
 }
 
-/* IR mode fills the pane like a document */
-#ir-pane .vditor {
-  border: none;
-  height: 100%;
+/* ---------- GitHub Alerts（> [!NOTE] 等） ---------- */
+#preview .callout.marktop-alert {
+  --alert-color: var(--accent);
+  position: relative;
+  border-left: 3px solid var(--alert-color);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--alert-color) 12%, transparent);
+  padding: 8px 12px;
+  margin: 16px 0;
 }
 
-#ir-pane .vditor-toolbar {
-  background: transparent;
-  border-bottom: 1px solid var(--border);
-  padding-left: 8px;
+#preview .callout.marktop-alert::before {
+  content: none;
 }
 
-#ir-pane .vditor-content {
-  background: transparent;
+#preview .callout.marktop-alert.marktop-alert-tip {
+  --alert-color: var(--success);
 }
 
-#ir-pane .vditor-ir {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 16px 24px 40vh;
+#preview .callout.marktop-alert.marktop-alert-important {
+  --alert-color: var(--alert-important);
 }
 
-#ir-pane .vditor-reset {
-  font-size: 15px;
+#preview .callout.marktop-alert.marktop-alert-warning {
+  --alert-color: var(--warning);
+}
+
+#preview .callout.marktop-alert.marktop-alert-caution {
+  --alert-color: var(--danger);
+}
+
+#preview .callout.marktop-alert > .callout-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 0;
+  color: var(--alert-color);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#preview .callout .callout-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+#preview .callout .callout-content > :first-child {
+  margin-top: 0;
+}
+
+#preview .callout .callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+#preview .callout .callout-content p {
+  font-size: 13.5px;
+  line-height: 1.7;
 }
 
 /* toast */

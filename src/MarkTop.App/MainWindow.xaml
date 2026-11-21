@@ -77,10 +77,6 @@
                                          Checked="OnModeChecked" Tag="split" />
                             <RadioButton x:Name="ModeSource" Content="源码" GroupName="Mode"
                                          Style="{StaticResource SegmentButton}" Checked="OnModeChecked" Tag="source" />
-                            <RadioButton x:Name="ModeImmersive" Content="沉浸" GroupName="Mode"
-                                         Style="{StaticResource SegmentButton}" Checked="OnModeChecked" Tag="immersive" />
-                            <RadioButton x:Name="ModeIr" Content="即时渲染" GroupName="Mode"
-                                         Style="{StaticResource SegmentButton}" Checked="OnModeChecked" Tag="ir" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

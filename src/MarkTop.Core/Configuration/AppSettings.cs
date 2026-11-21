@@ -29,6 +29,7 @@ public sealed class AppSettings
     {
         Theme = string.Equals(Theme, "light", StringComparison.OrdinalIgnoreCase) ? "light" : "dark";
         Editor ??= new EditorSettings();
+        Editor.Mode = Editor.Mode is "source" ? "source" : "split";
         Export ??= new ExportSettings();
         Git ??= new GitSettings();
         Window ??= new WindowSettings();
@@ -47,7 +48,7 @@ public sealed class AppSettings
 
 public sealed class EditorSettings
 {
-    /// <summary>"split" | "ir" | "source" | "immersive".</summary>
+    /// <summary>"split"（源码 + 预览）或 "source"（仅源码）。旧的 ir / immersive 会回落到 split。</summary>
     public string Mode { get; set; } = "split";
 
     public string FontFamily { get; set; } = "Cascadia Mono, Consolas, Microsoft YaHei UI";

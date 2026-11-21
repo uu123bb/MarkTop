@@ -1,13 +1,13 @@
 import { connect, isHostAvailable, on, post } from "./bridge";
 import { Editor, type DocKind } from "./editor";
 import { Preview } from "./preview";
-import { IrEditor } from "./ir";
+import { enhanceGithubSyntax } from "./github";
 import { ScrollSync } from "./scrollSync";
 import { setLintConfig } from "./lint";
 import { renderForExport } from "./export";
 import type { EditorState } from "@codemirror/state";
 
-type Mode = "split" | "source" | "ir" | "immersive";
+type Mode = "split" | "source";
 
 interface EditorSettings {
   mode?: string;
@@ -36,13 +36,11 @@ interface DocPayload {
 const workspace = document.getElementById("workspace") as HTMLElement;
 const cmHost = document.getElementById("cm-host") as HTMLElement;
 const previewElement = document.getElementById("preview") as HTMLElement;
-const irHost = document.getElementById("ir-host") as HTMLElement;
 const printRoot = document.getElementById("print-root") as HTMLElement;
 const toast = document.getElementById("toast") as HTMLElement;
 
 const preview = new Preview(previewElement);
 let editor: Editor | null = null;
-let ir: IrEditor | null = null;
 let scrollSync: ScrollSync | null = null;
 
 let settings: InitSettings = { theme: "dark", editor: {} };
@@ -87,10 +85,6 @@ function showToast(message: string, error = false): void {
 }
 
 function getText(): string {
-  if (currentMode === "ir" && ir?.mounted && currentKind === "markdown") {
-    return ir.getValue();
-  }
-
   return editor?.getText() ?? "";
 }
 
@@ -138,6 +132,7 @@ async function renderPreview(): Promise<void> {
 
   const text = getText();
   await preview.render(text);
+  enhanceGithubSyntax(previewElement);
   scrollSync?.scheduleRebuild(text);
 }
 
@@ -146,52 +141,19 @@ function applyTheme(): void {
   document.documentElement.dataset.theme = dark ? "dark" : "light";
   preview.setTheme(dark);
   editor?.setTheme(dark);
-  if (ir?.mounted) {
-    const text = ir.getValue();
-    void ir.destroy().then(() => ir?.mount(text));
-  }
-}
-
-async function destroyIr(): Promise<void> {
-  if (!ir) {
-    return;
-  }
-
-  const text = ir.getValue();
-  await ir.destroy();
-  if (text && text !== editor?.getText()) {
-    suppressDirty = true;
-    editor?.setText(text);
-    suppressDirty = false;
-  }
-}
-
-async function mountIr(): Promise<void> {
-  if (!ir) {
-    ir = new IrEditor(irHost, (value) => handleChange(value), isDark());
-  }
-
-  const text = getText();
-  await ir.mount(text);
-  ir.focus();
 }
 
 function applyMode(mode: Mode): void {
   const effective: Mode = currentKind === "markdown" ? mode : "source";
   currentMode = effective;
-  workspace.classList.remove("mode-split", "mode-source", "mode-ir", "mode-immersive");
+  workspace.classList.remove("mode-split", "mode-source");
   workspace.classList.add(`mode-${effective}`);
 
-  if (effective === "ir") {
-    void mountIr();
-  } else {
-    void destroyIr().then(() => {
-      if (effective === "split") {
-        void renderPreview();
-      }
-      editor?.focus();
-    });
+  if (effective === "split") {
+    void renderPreview();
   }
+
+  editor?.focus();
 }
 
 function ensureEditor(payload: DocPayload): void {
@@ -229,13 +191,6 @@ function ensureEditor(payload: DocPayload): void {
 function openDocument(payload: DocPayload): void {
   if (currentDocId && editor) {
     savedStates.set(currentDocId, { state: editor.view.state, kind: currentKind, path: currentPath });
-    if (ir?.mounted) {
-      const text = ir.getValue();
-      suppressDirty = true;
-      editor.setText(text);
-      suppressDirty = false;
-      savedStates.set(currentDocId, { state: editor.view.state, kind: currentKind, path: currentPath });
-    }
   }
 
   ensureEditor(payload);
@@ -257,7 +212,6 @@ function openDocument(payload: DocPayload): void {
     suppressDirty = false;
   }
 
-  void destroyIr();
   applyMode((payload.mode as Mode) ?? (settings.editor?.mode as Mode) ?? "split");
   reportStatus();
 }
@@ -370,13 +324,9 @@ on("doc.open", (message) => {
 on("doc.setText", (message) => {
   const text = String(message.text ?? "");
   suppressDirty = true;
-  if (currentMode === "ir" && ir?.mounted) {
-    void ir.destroy().then(() => ir?.mount(text));
-  } else {
-    editor?.setText(text);
-    if (currentMode === "split") {
-      void renderPreview();
-    }
+  editor?.setText(text);
+  if (currentMode === "split") {
+    void renderPreview();
   }
   suppressDirty = false;
 });
@@ -448,11 +398,7 @@ on("doc.saved", () => {
 });
 
 on("focus.editor", () => {
-  if (currentMode === "ir") {
-    ir?.focus();
-  } else {
-    editor?.focus();
-  }
+  editor?.focus();
 });
 
 document.addEventListener("keydown", (event) => {
@@ -477,6 +423,10 @@ previewElement.addEventListener("click", (event) => {
   }
 });
 
+window.addEventListener("error", (event) => {
+  showToast(`发生错误：${event.message}`, true);
+});
+
 window.addEventListener("unhandledrejection", (event) => {
   showToast(`发生错误：${String(event.reason)}`, true);
 });
@@ -492,7 +442,8 @@ if (!isHostAvailable()) {
 
 ## 特性
 
-- **即时渲染**、双栏编辑、沉浸编辑
+- 双栏编辑与源码模式
+- GitHub Alerts 与脚注
 - 语法高亮与 \`行内代码\`
 - 导出 Markdown / HTML / PDF
 
@@ -511,6 +462,14 @@ public static class Hello
 | --- | --- |
 | 预览 | 可用 |
 | 语法检查 | 可用 |
+
+## Alerts
+
+> [!NOTE]
+> 这是 GitHub 风格的提示块。
+
+> [!WARNING]
+> 保存前请确认路径。
 
 ## 公式
 

@@ -1,3 +1,5 @@
+import { enhanceGithubSyntax } from "./github";
+
 declare const Vditor: {
   md2html: (markdown: string, options?: Record<string, unknown>) => Promise<string>;
 };
@@ -24,6 +26,7 @@ export async function renderForExport(markdown: string, options: ExportOptions):
   renderMath(container);
   await renderMermaid(container, options.dark);
   highlightCode(container);
+  enhanceGithubSyntax(container);
 
   return container.innerHTML;
 }

@@ -34,7 +34,6 @@ public partial class MainWindow : Window
     private string? _workspace;
     private bool _dirty;
     private bool _suppressModeEvents;
-    private string _previousMode = "split";
     private int _requestCounter;
 
     public ObservableCollection<DocTab> Tabs { get; } = new();
@@ -263,7 +262,7 @@ public partial class MainWindow : Window
             var sample = Path.Combine(directory, "selftest.md");
             await File.WriteAllTextAsync(sample,
                 "# Self Test\n\n段落文本，用来验证往返。\n\n```csharp\nvar answer = 42;\n```\n\n" +
-                "| 列 A | 列 B |\n| --- | --- |\n| 1 | 2 |\n\n$$E = mc^2$$\n\n```mermaid\ngraph LR\n  A --> B\n```\n");
+                "| 列 A | 列 B |\n| --- | --- |\n| 1 | 2 |\n\n> [!NOTE]\n> 自检用的提示块。\n\n$$E = mc^2$$\n\n```mermaid\ngraph LR\n  A --> B\n```\n");
 
             await OpenPathAsync(sample);
             await Task.Delay(1500);
@@ -786,11 +785,8 @@ public partial class MainWindow : Window
         _suppressModeEvents = true;
         ModeSplit.IsChecked = mode == "split";
         ModeSource.IsChecked = mode == "source";
-        ModeImmersive.IsChecked = mode == "immersive";
-        ModeIr.IsChecked = mode == "ir";
         _suppressModeEvents = false;
 
-        Sidebar.Visibility = mode == "immersive" ? Visibility.Collapsed : Visibility.Visible;
         _bridge?.Send("mode.set", new { mode });
 
         _settings.Settings.Editor.Mode = mode;
@@ -799,7 +795,7 @@ public partial class MainWindow : Window
 
     private void CycleMode()
     {
-        var order = new[] { "split", "source", "immersive", "ir" };
+        var order = new[] { "split", "source" };
         var index = Array.IndexOf(order, _settings.Settings.Editor.Mode);
         ApplyMode(order[(index + 1) % order.Length]);
     }
@@ -1311,24 +1307,6 @@ public partial class MainWindow : Window
         {
             e.Handled = true;
             CycleMode();
-        }
-        else if (e.Key == Key.F11)
-        {
-            e.Handled = true;
-            if (_settings.Settings.Editor.Mode == "immersive")
-            {
-                ApplyMode(_previousMode);
-            }
-            else
-            {
-                _previousMode = _settings.Settings.Editor.Mode;
-                ApplyMode("immersive");
-            }
-        }
-        else if (e.Key == Key.Escape && _settings.Settings.Editor.Mode == "immersive")
-        {
-            e.Handled = true;
-            ApplyMode(_previousMode);
         }
     }
 
