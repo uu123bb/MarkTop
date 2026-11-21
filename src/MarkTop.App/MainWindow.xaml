@@ -12,6 +12,7 @@
         PreviewKeyDown="OnPreviewKeyDown">
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <HierarchicalDataTemplate x:Key="FileTemplate" DataType="{x:Type local:FileNode}"
                                   ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal" Margin="0,1">
@@ -118,8 +119,52 @@
             </Border>
 
             <Grid Grid.Column="1">
-                <wv2:WebView2 x:Name="EditorWebView" DefaultBackgroundColor="#1E1E1E" />
-                <Border x:Name="LoadingOverlay" Background="{DynamicResource AppBackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource PanelBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                    <ItemsControl x:Name="TabBar" ItemsSource="{Binding Tabs}" Margin="6,4,6,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="TabRoot" Margin="0,0,2,0" CornerRadius="6,6,0,0" Padding="10,5,4,5"
+                                        Background="Transparent" BorderThickness="0,0,0,0"
+                                        MouseLeftButtonDown="OnTabClick">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Title}" FontSize="12" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource MutedBrush}" />
+                                        <TextBlock Text=" •" FontSize="12" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   Visibility="{Binding Dirty, Converter={StaticResource BoolToVisibility}}" />
+                                        <Button Content="×" Style="{StaticResource ToolButton}" FontSize="12"
+                                                Padding="5,0" Margin="6,0,0,0" Click="OnTabCloseClick"
+                                                ToolTip="关闭标签" />
+                                    </StackPanel>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                        <Setter TargetName="TabRoot" Property="Background"
+                                                Value="{DynamicResource AppBackgroundBrush}" />
+                                        <Setter TargetName="TabRoot" Property="BorderThickness" Value="0,0,0,0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                        <Setter TargetName="TabRoot" Property="Opacity" Value="0.72" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <wv2:WebView2 x:Name="EditorWebView" Grid.Row="1" DefaultBackgroundColor="#1E1E1E" />
+                <Border x:Name="LoadingOverlay" Grid.Row="1" Background="{DynamicResource AppBackgroundBrush}">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="正在加载编辑器…" Foreground="{DynamicResource MutedBrush}" FontSize="13"
                                    HorizontalAlignment="Center" />

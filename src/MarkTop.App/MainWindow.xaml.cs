@@ -27,6 +27,7 @@ public partial class MainWindow : Window
 
     private WebBridge? _bridge;
     private DocumentSession? _document;
+    private DocTab? _activeTab;
     private ProfileRepo? _profileRepo;
     private string _docId = string.Empty;
     private string _assetsDir = string.Empty;
@@ -36,9 +37,12 @@ public partial class MainWindow : Window
     private string _previousMode = "split";
     private int _requestCounter;
 
+    public ObservableCollection<DocTab> Tabs { get; } = new();
+
     public MainWindow()
     {
         InitializeComponent();
+        DataContext = this;
 
         _settings = new SettingsStore();
         if (!File.Exists(_settings.Path))
@@ -136,6 +140,11 @@ public partial class MainWindow : Window
         _bridge.On("doc.dirty", payload =>
         {
             _dirty = WebBridge.Bool(payload, "dirty");
+            if (_activeTab is not null)
+            {
+                _activeTab.Dirty = _dirty;
+            }
+
             UpdateTitle();
         });
         _bridge.On("doc.status", UpdateStatus);
@@ -193,6 +202,22 @@ public partial class MainWindow : Window
         }
 
         var settings = _settings.Settings;
+
+        if (Tabs.Count == 0)
+        {
+            var tab = new DocTab
+            {
+                DocId = "untitled-1",
+                Path = "未命名.md",
+                Title = "未命名.md",
+                PendingText = string.Empty,
+                IsActive = true,
+            };
+            Tabs.Add(tab);
+            _activeTab = tab;
+            _docId = tab.DocId;
+        }
+
         _bridge.Send("init", new
         {
             settings = new
@@ -284,6 +309,47 @@ public partial class MainWindow : Window
                 DocumentSession.SaveAs(mdPath, text, Environment.NewLine);
                 report.Add($"markdown: {new FileInfo(mdPath).Length} bytes");
             }
+
+            // multi-tab: a second document must keep its own text, and switching back must restore the first.
+            var second = Path.Combine(directory, "second.md");
+            await File.WriteAllTextAsync(second, "# Second\n\n第二个文档\n");
+            await OpenPathAsync(second);
+            await Task.Delay(1500);
+            var secondText = await RequestTextAsync();
+            if (secondText is null || !secondText.Contains("Second"))
+            {
+                await Task.Delay(1500);
+                secondText = await RequestTextAsync();
+            }
+
+            report.Add($"tabs: {Tabs.Count}");
+            if (Tabs.Count < 2 || secondText is null || !secondText.Contains("Second"))
+            {
+                ok = false;
+                report.Add($"FAIL second tab ({secondText?.Length ?? -1} chars)");
+            }
+
+            var firstTab = Tabs.FirstOrDefault(tab => tab.Path.EndsWith("selftest.md", StringComparison.OrdinalIgnoreCase));
+            if (firstTab is null)
+            {
+                ok = false;
+                report.Add("FAIL tab lookup");
+            }
+            else
+            {
+                SetActiveTab(firstTab);
+                await Task.Delay(900);
+                var restored = await RequestTextAsync();
+                if (restored is null || !restored.Contains("Self Test"))
+                {
+                    ok = false;
+                    report.Add("FAIL tab switch back");
+                }
+                else
+                {
+                    report.Add($"tab restore: {restored.Length} chars");
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -299,25 +365,26 @@ public partial class MainWindow : Window
 
     private Dictionary<string, object> BuildDocumentPayload()
     {
-        if (_document is null)
+        var tab = _activeTab;
+        if (tab?.Session is null)
         {
-            _docId = "untitled-1";
+            _docId = tab?.DocId ?? "untitled-1";
             return new Dictionary<string, object>
             {
                 ["docId"] = _docId,
-                ["path"] = "未命名.md",
+                ["path"] = tab?.Path ?? "未命名.md",
                 ["kind"] = "markdown",
-                ["text"] = string.Empty,
+                ["text"] = tab?.PendingText ?? string.Empty,
                 ["mode"] = _settings.Settings.Editor.Mode,
             };
         }
 
         return new Dictionary<string, object>
         {
-            ["docId"] = _docId,
-            ["path"] = _document.Path,
-            ["kind"] = KindName(_document.Kind),
-            ["text"] = _document.OriginalText,
+            ["docId"] = tab.DocId,
+            ["path"] = tab.Path,
+            ["kind"] = KindName(tab.Session.Kind),
+            ["text"] = tab.Session.OriginalText,
             ["mode"] = _settings.Settings.Editor.Mode,
         };
     }
@@ -370,38 +437,138 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_dirty && !await ConfirmDiscardAsync())
+        var full = Path.GetFullPath(path);
+        var existing = Tabs.FirstOrDefault(tab =>
+            string.Equals(tab.Path, full, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
         {
+            SetActiveTab(existing);
             return;
         }
 
         try
         {
-            if (IsProbablyBinary(path))
+            if (IsProbablyBinary(full))
             {
-                StatusPath.Text = $"二进制文件不支持编辑：{Path.GetFileName(path)}";
+                StatusPath.Text = $"二进制文件不支持编辑：{Path.GetFileName(full)}";
                 return;
             }
 
-            _document = DocumentSession.Open(path);
-            _docId = _document.Path;
-            _dirty = false;
+            var session = DocumentSession.Open(full);
+            var tab = new DocTab
+            {
+                DocId = session.Path,
+                Path = session.Path,
+                Session = session,
+                Title = session.FileName,
+            };
 
-            MapDocumentHost(Path.GetDirectoryName(_document.Path));
-            SendOpenDocument();
+            Tabs.Add(tab);
+            SetActiveTab(tab);
 
-            RememberRecent(path);
-            StatusEncoding.Text = _document.Encoding.DisplayName;
-            StatusEol.Text = LineEndings.Describe(_document.LineEnding);
-            StatusPath.Text = _document.IsLossyFallback
-                ? $"{path}（编码无法识别，保存将使用当前编码）"
-                : path;
-            UpdateTitle();
+            RememberRecent(full);
+            StatusPath.Text = session.IsLossyFallback
+                ? $"{full}（编码无法识别，保存将使用当前编码）"
+                : full;
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, $"打开文件失败：\n{ex.Message}", "MarkTop",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    /// <summary>Makes a tab current. The web layer keeps a per-docId EditorState, so its undo stack survives.</summary>
+    private void SetActiveTab(DocTab tab)
+    {
+        foreach (var other in Tabs)
+        {
+            other.IsActive = ReferenceEquals(other, tab);
+        }
+
+        _activeTab = tab;
+        _document = tab.Session;
+        _docId = tab.DocId;
+        _dirty = tab.Dirty;
+
+        if (tab.Session is not null)
+        {
+            MapDocumentHost(Path.GetDirectoryName(tab.Path));
+            StatusEncoding.Text = tab.Session.Encoding.DisplayName;
+            StatusEol.Text = LineEndings.Describe(tab.Session.LineEnding);
+        }
+
+        _bridge?.Send("doc.open", new
+        {
+            docId = tab.DocId,
+            path = tab.Path,
+            kind = KindName(tab.Session?.Kind ?? DocumentKind.Markdown),
+            text = tab.Session?.OriginalText ?? tab.PendingText ?? string.Empty,
+            mode = _settings.Settings.Editor.Mode,
+        });
+
+        UpdateTitle();
+    }
+
+    private void CreateUntitledTab(string text, string suggestedName)
+    {
+        var tab = new DocTab
+        {
+            DocId = $"untitled-{++_requestCounter}",
+            Path = suggestedName,
+            Session = null,
+            PendingText = text,
+            Title = suggestedName,
+        };
+
+        Tabs.Add(tab);
+        SetActiveTab(tab);
+        StatusEncoding.Text = "UTF-8";
+        StatusEol.Text = LineEndings.Describe(Environment.NewLine);
+    }
+
+    private async void OnTabClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DocTab tab })
+        {
+            SetActiveTab(tab);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async void OnTabCloseClick(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is not FrameworkElement { DataContext: DocTab tab })
+        {
+            return;
+        }
+
+        if (tab.Dirty)
+        {
+            SetActiveTab(tab);
+            if (!await ConfirmDiscardAsync())
+            {
+                return;
+            }
+        }
+
+        var wasActive = ReferenceEquals(tab, _activeTab);
+        Tabs.Remove(tab);
+
+        if (!wasActive)
+        {
+            return;
+        }
+
+        if (Tabs.Count > 0)
+        {
+            SetActiveTab(Tabs[^1]);
+        }
+        else
+        {
+            CreateUntitledTab(string.Empty, "未命名.md");
         }
     }
 
@@ -454,6 +621,16 @@ public partial class MainWindow : Window
                 DocumentSession.SaveAs(dialog.FileName, text, Environment.NewLine);
                 _document = DocumentSession.Open(dialog.FileName);
                 _docId = _document.Path;
+                if (_activeTab is not null)
+                {
+                    _activeTab.DocId = _document.Path;
+                    _activeTab.Path = _document.Path;
+                    _activeTab.Session = _document;
+                    _activeTab.Title = _document.FileName;
+                    _activeTab.PendingText = null;
+                    _activeTab.Dirty = false;
+                }
+
                 MapDocumentHost(Path.GetDirectoryName(dialog.FileName));
                 SendOpenDocument();
                 RememberRecent(dialog.FileName);
@@ -494,6 +671,12 @@ public partial class MainWindow : Window
         }
 
         _dirty = false;
+        if (_activeTab is not null)
+        {
+            _activeTab.Dirty = false;
+            _activeTab.Session = _document;
+        }
+
         _bridge.Send("doc.saved");
         UpdateTitle();
         StatusPath.Text = $"已保存 · {DateTime.Now:HH:mm:ss}";
@@ -992,22 +1175,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _document = null;
-        _docId = $"untitled-{++_requestCounter}";
-        _dirty = false;
-
-        _bridge.Send("doc.open", new
-        {
-            docId = _docId,
-            path = suggestedName,
-            kind = "markdown",
-            text,
-            mode = _settings.Settings.Editor.Mode,
-        });
-
-        Title = $"{suggestedName} — MarkTop";
-        StatusEncoding.Text = "UTF-8";
-        StatusEol.Text = LineEndings.Describe(Environment.NewLine);
+        CreateUntitledTab(text, suggestedName);
     }
 
     // ---------- image paste ----------
@@ -1103,11 +1271,11 @@ public partial class MainWindow : Window
 
     private void UpdateTitle()
     {
-        var name = _document is null ? "未命名" : Path.GetFileName(_document.Path);
+        var name = _activeTab?.Title ?? "未命名";
         Title = $"{name}{(_dirty ? " •" : string.Empty)} — MarkTop";
-        if (_document is not null)
+        if (_activeTab?.Session is not null)
         {
-            StatusPath.Text = _document.Path;
+            StatusPath.Text = _activeTab.Path;
         }
     }
 
@@ -1180,15 +1348,73 @@ public partial class MainWindow : Window
 
         _settings.Save();
 
-        if (_dirty)
+        if (Tabs.Any(tab => tab.Dirty))
         {
-            var answer = MessageBox.Show(this, "文档有未保存的修改，确定要退出吗？", "MarkTop",
+            var answer = MessageBox.Show(this, "有文档存在未保存的修改，确定要退出吗？", "MarkTop",
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (answer != MessageBoxResult.Yes)
             {
                 e.Cancel = true;
             }
         }
+    }
+}
+
+/// <summary>One open document. The web layer keeps the text; this object only tracks identity and dirty state.</summary>
+public sealed class DocTab : System.ComponentModel.INotifyPropertyChanged
+{
+    private string _title = string.Empty;
+    private string _path = string.Empty;
+    private bool _dirty;
+    private bool _isActive;
+    private MarkTop.Core.Documents.DocumentSession? _session;
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+    public string DocId { get; set; } = string.Empty;
+
+    /// <summary>Content for documents that do not exist on disk yet (imported HTML, new file).</summary>
+    public string? PendingText { get; set; }
+
+    public MarkTop.Core.Documents.DocumentSession? Session
+    {
+        get => _session;
+        set => Set(ref _session, value);
+    }
+
+    public string Title
+    {
+        get => _title;
+        set => Set(ref _title, value);
+    }
+
+    public string Path
+    {
+        get => _path;
+        set => Set(ref _path, value);
+    }
+
+    public bool Dirty
+    {
+        get => _dirty;
+        set => Set(ref _dirty, value);
+    }
+
+    public bool IsActive
+    {
+        get => _isActive;
+        set => Set(ref _isActive, value);
+    }
+
+    private void Set<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string? name = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+        {
+            return;
+        }
+
+        field = value;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
     }
 }
 
