@@ -5,7 +5,7 @@ Windows 10/11 上的本地化 Markdown 编辑器：单文件绿色版，纯离�
 ## 特性
 
 - **多标签 + 文件树**：打开文件夹作为工作区，左侧树懒加载，标签页保留各自的撤销栈与脏标记
-- **三种编辑形态**：双栏（源码 + 实时预览）、沉浸（无干扰单栏）、所见即所得（Vditor IR）
+- **三种编辑形态**：双栏（源码 + 实时预览）、沉浸（无干扰单栏）、即时渲染（Vditor IR，编辑处即排版效果）
 - **IDE 风格深浅主题**：WPF 外壳、CodeMirror 源码区、Vditor 预览与代码高亮同步换肤
 - **语法高亮**：Markdown、JSON、XML、YAML 使用 CodeMirror 语法树着色；其它文本按纯文本编辑
 - **语法检查**：markdownlint 在 Web Worker 中运行，问题以波浪线与行号槽标记，支持文档目录下的 `.markdownlint.json`
@@ -89,7 +89,7 @@ artifacts\publish\MarkTop.exe --self-test .\selftest
 | 快捷键 | 功能 |
 | --- | --- |
 | `Ctrl+O` / `Ctrl+S` | 打开 / 保存 |
-| `Ctrl+E` | 在双栏 / 源码 / 沉浸 / 所见即所得之间切换 |
+| `Ctrl+E` | 在双栏 / 源码 / 沉浸 / 即时渲染之间切换 |
 | `F11` / `Esc` | 进入 / 退出沉浸模式 |
 | `Ctrl+F` / `Ctrl+H` | 查找 / 替换（源码区） |
 

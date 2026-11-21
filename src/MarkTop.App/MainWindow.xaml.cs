@@ -787,7 +787,7 @@ public partial class MainWindow : Window
         ModeSplit.IsChecked = mode == "split";
         ModeSource.IsChecked = mode == "source";
         ModeImmersive.IsChecked = mode == "immersive";
-        ModeWysiwyg.IsChecked = mode == "ir";
+        ModeIr.IsChecked = mode == "ir";
         _suppressModeEvents = false;
 
         Sidebar.Visibility = mode == "immersive" ? Visibility.Collapsed : Visibility.Visible;
