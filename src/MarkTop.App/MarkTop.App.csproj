@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>MarkTop.App</RootNamespace>
+    <AssemblyName>MarkTop</AssemblyName>
+    <ApplicationManifest>Assets\app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\marktop.ico</ApplicationIcon>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <SatelliteResourceLanguages>zh-Hans;en</SatelliteResourceLanguages>
+    <AllowedReferenceRelatedFileExtensions>.pdb</AllowedReferenceRelatedFileExtensions>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- web assets -->
+  <PropertyGroup>
+    <WebProjectDir>$(MSBuildThisFileDirectory)..\MarkTop.Web\</WebProjectDir>
+    <WebDistDir>$(WebProjectDir)dist\</WebDistDir>
+    <!-- IntermediateOutputPath is not resolved yet when this target runs, so build the path by hand. -->
+    <WebZipPath>$(BaseIntermediateOutputPath)web-assets-$(Configuration).zip</WebZipPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4370.26" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MarkTop.Core\MarkTop.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\marktop.ico" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="$(WebZipPath)" LogicalName="MarkTop.web-assets.zip"
+                      Condition="'$(SkipWebBuild)' != 'true'" />
+  </ItemGroup>
+
+  <!-- The zip must exist before EmbeddedResource items are resolved (PrepareResourceNames),
+       so the web build runs at the very beginning of the build with PrepareForBuild as anchor. -->
+  <Target Name="BuildWebAssets" Condition="'$(SkipWebBuild)' != 'true'"
+          Inputs="$(WebProjectDir)src\**\*;$(WebProjectDir)package.json;$(WebProjectDir)build.mjs"
+          Outputs="$(WebDistDir)app.js">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(WebProjectDir)"
+          Condition="!Exists('$(WebProjectDir)node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(WebProjectDir)" />
+  </Target>
+
+  <Target Name="PackWebAssets" DependsOnTargets="BuildWebAssets" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(WebDistDir)app.js')"
+           Text="前端产物缺失：$(WebDistDir)app.js。请安装 Node 20+ 后重新构建，或用 -p:SkipWebBuild=true 跳过。" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <ZipDirectory SourceDirectory="$(WebDistDir)" DestinationFile="$(WebZipPath)" Overwrite="true" />
+  </Target>
+
+</Project>

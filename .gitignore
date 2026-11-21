@@ -1,0 +1,25 @@
+# builds
+bin/
+obj/
+artifacts/
+publish/
+*.user
+*.suo
+.vs/
+
+# frontend
+node_modules/
+src/MarkTop.Web/dist/
+src/MarkTop.Web/.cache/
+
+# runtime data that must never be committed
+setting-marktop.json
+setting-marktop.json.bak
+*.log
+.cache/
+
+# os / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/

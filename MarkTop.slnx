@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MarkTop.App/MarkTop.App.csproj" />
+    <Project Path="src/MarkTop.Core/MarkTop.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MarkTop.Core.Tests/MarkTop.Core.Tests.csproj" />
+  </Folder>
+</Solution>

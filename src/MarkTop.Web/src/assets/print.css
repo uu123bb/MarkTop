@@ -1,0 +1,143 @@
+/* Print / PDF output. Page size and margins come from ICoreWebView2PrintSettings, never from @page. */
+
+#print-root {
+  display: none;
+}
+
+html.printing,
+html.printing body {
+  overflow: visible;
+  height: auto;
+  background: #ffffff;
+  color: #111111;
+}
+
+html.printing #workspace,
+html.printing #toast {
+  display: none !important;
+}
+
+html.printing #print-root {
+  display: block;
+  padding: 0;
+}
+
+.print-document {
+  font-family: "Segoe UI", "Microsoft YaHei UI", "Noto Sans CJK SC", sans-serif;
+  font-size: 11pt;
+  line-height: 1.7;
+  color: #111111;
+  background: #ffffff;
+  max-width: 100%;
+}
+
+.print-document h1,
+.print-document h2,
+.print-document h3,
+.print-document h4,
+.print-document h5,
+.print-document h6 {
+  color: #111111;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.print-document h1 {
+  font-size: 1.8em;
+  border-bottom: 1px solid #dddddd;
+  padding-bottom: 0.25em;
+}
+
+.print-document h2 {
+  font-size: 1.4em;
+  border-bottom: 1px solid #eeeeee;
+  padding-bottom: 0.2em;
+}
+
+.print-document p,
+.print-document li {
+  orphans: 3;
+  widows: 3;
+}
+
+.print-document a {
+  color: #0b5cad;
+  text-decoration: none;
+}
+
+.print-document img {
+  max-width: 100%;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-document pre,
+.print-document table,
+.print-document blockquote {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-document pre {
+  background: #f6f8fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.print-document code {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 0.88em;
+  background: #f2f3f5;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+.print-document pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.print-document blockquote {
+  border-left: 3px solid #d0d7de;
+  color: #57606a;
+  margin-left: 0;
+  padding-left: 14px;
+}
+
+.print-document table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.print-document table th,
+.print-document table td {
+  border: 1px solid #d0d7de;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.print-document table th {
+  background: #f6f8fa;
+}
+
+.print-document hr {
+  border: none;
+  border-top: 1px solid #d0d7de;
+  margin: 1.6em 0;
+}
+
+.print-document .katex-display {
+  break-inside: avoid;
+}
+
+.print-document svg {
+  max-width: 100%;
+}

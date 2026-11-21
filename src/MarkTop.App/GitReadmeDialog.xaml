@@ -1,0 +1,27 @@
+<Window x:Class="MarkTop.App.GitReadmeDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="快速编辑 GitHub README"
+        Width="480" SizeToContent="Height" WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource ForegroundBrush}">
+    <StackPanel Margin="20">
+        <TextBlock Text="GitHub 用户名" Style="{StaticResource DialogLabel}" />
+        <TextBox x:Name="UserNameBox" Style="{StaticResource DialogTextBox}" Margin="0,0,0,4" />
+        <TextBlock Text="将克隆 https://github.com/&lt;用户名&gt;/&lt;用户名&gt;.git 并打开其中的 README"
+                   FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,14" />
+
+        <TextBlock Text="提交信息（保存时使用）" Style="{StaticResource DialogLabel}" />
+        <TextBox x:Name="CommitMessageBox" Style="{StaticResource DialogTextBox}"
+                 Height="66" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+
+        <TextBlock Text="需要本机已安装 Git 并配置好 user.name / user.email，以及可用的 GitHub 凭证。"
+                   FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="取消" Style="{StaticResource ToolButton}" Padding="14,6" Margin="0,0,8,0"
+                    Click="OnCancelClick" />
+            <Button Content="拉取并打开" Style="{StaticResource PrimaryButton}" Click="OnConfirmClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>
